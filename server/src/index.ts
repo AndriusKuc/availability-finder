@@ -4,8 +4,12 @@ import session from 'express-session';
 import path from 'path';
 import dotenv from 'dotenv';
 import routes from './routes';
+import db from './config/database';
+import SqliteStore from 'better-sqlite3-session-store';
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+
+const BetterSqliteStore = SqliteStore(session);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +34,13 @@ app.use(express.json());
 
 app.use(
   session({
+    store: new BetterSqliteStore({
+      client: db,
+      expired: {
+        clear: true,
+        intervalMs: 900000, // Clear expired sessions every 15 min
+      },
+    }),
     secret: process.env.SESSION_SECRET || 'dev-secret',
     resave: false,
     saveUninitialized: false,
