@@ -12,6 +12,11 @@ const PORT = process.env.PORT || 3001;
 const CLIENT_PORT = process.env.CLIENT_PORT || 5173;
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Trust proxy (required for secure cookies behind Railway/Heroku/etc)
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(
   cors({
