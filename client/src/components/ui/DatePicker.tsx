@@ -94,7 +94,8 @@ export function DatePicker({
   const month = viewDate.getMonth();
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  const startDay = firstDay.getDay();
+  // Convert Sunday-based (0-6) to Monday-based (0-6)
+  const startDay = (firstDay.getDay() + 6) % 7;
   const daysInMonth = lastDay.getDate();
 
   const monthYear = viewDate.toLocaleDateString('en-US', {
@@ -169,7 +170,7 @@ export function DatePicker({
 
           {/* Day headers */}
           <div className="grid grid-cols-7 mb-2">
-            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => (
               <span
                 key={d}
                 className="text-center text-xs font-semibold text-gray-400 py-1"

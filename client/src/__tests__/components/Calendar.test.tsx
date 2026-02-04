@@ -17,15 +17,18 @@ describe('Calendar', () => {
     expect(screen.getByText('June 2025')).toBeInTheDocument();
   });
 
-  it('renders day headers', () => {
+  it('renders day headers starting from Monday', () => {
     render(<Calendar {...defaultProps} />);
-    expect(screen.getByText('Sun')).toBeInTheDocument();
-    expect(screen.getByText('Mon')).toBeInTheDocument();
-    expect(screen.getByText('Tue')).toBeInTheDocument();
-    expect(screen.getByText('Wed')).toBeInTheDocument();
-    expect(screen.getByText('Thu')).toBeInTheDocument();
-    expect(screen.getByText('Fri')).toBeInTheDocument();
-    expect(screen.getByText('Sat')).toBeInTheDocument();
+    const headers = screen.getAllByText(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/);
+    expect(headers).toHaveLength(7);
+    // Check order: Mon, Tue, Wed, Thu, Fri, Sat, Sun
+    expect(headers[0]).toHaveTextContent('Mon');
+    expect(headers[1]).toHaveTextContent('Tue');
+    expect(headers[2]).toHaveTextContent('Wed');
+    expect(headers[3]).toHaveTextContent('Thu');
+    expect(headers[4]).toHaveTextContent('Fri');
+    expect(headers[5]).toHaveTextContent('Sat');
+    expect(headers[6]).toHaveTextContent('Sun');
   });
 
   it('renders days of the month', () => {
@@ -149,5 +152,152 @@ describe('Calendar', () => {
     // Should show the heatmap legend
     expect(screen.getByText('All available')).toBeInTheDocument();
     expect(screen.getByText('All unavailable')).toBeInTheDocument();
+  });
+
+  it('shows tooltip on hover when heatmapNames is provided', () => {
+    const heatmapData = { '2025-06-15': 2 };
+    const heatmapNames = { '2025-06-15': ['Alice', 'Bob'] };
+    render(
+      <Calendar
+        {...defaultProps}
+        heatmapData={heatmapData}
+        heatmapNames={heatmapNames}
+        totalParticipants={5}
+      />
+    );
+
+    // Find the day with tooltip and hover over it
+    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
+    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
+
+    // Should show tooltip with names
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    expect(screen.getByText('• Alice')).toBeInTheDocument();
+    expect(screen.getByText('• Bob')).toBeInTheDocument();
+  });
+
+  it('shows correct count in tooltip', () => {
+    const heatmapData = { '2025-06-15': 2 };
+    const heatmapNames = { '2025-06-15': ['Alice', 'Bob'] };
+    render(
+      <Calendar
+        {...defaultProps}
+        heatmapData={heatmapData}
+        heatmapNames={heatmapNames}
+        totalParticipants={5}
+      />
+    );
+
+    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
+    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
+
+    // Should show "2/5 unavailable"
+    expect(screen.getByText('2/5 unavailable')).toBeInTheDocument();
+  });
+
+  it('shows "All unavailable" when everyone is unavailable', () => {
+    const heatmapData = { '2025-06-15': 3 };
+    const heatmapNames = { '2025-06-15': ['Alice', 'Bob', 'Charlie'] };
+    render(
+      <Calendar
+        {...defaultProps}
+        heatmapData={heatmapData}
+        heatmapNames={heatmapNames}
+        totalParticipants={3}
+      />
+    );
+
+    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
+    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
+
+    // Should show "All unavailable" in tooltip (not in legend)
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('All unavailable');
+  });
+
+  it('truncates long list of names in tooltip', () => {
+    const heatmapData = { '2025-06-15': 7 };
+    const heatmapNames = {
+      '2025-06-15': ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank', 'Grace'],
+    };
+    render(
+      <Calendar
+        {...defaultProps}
+        heatmapData={heatmapData}
+        heatmapNames={heatmapNames}
+        totalParticipants={10}
+      />
+    );
+
+    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
+    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
+
+    // Should show first 5 names and "+2 more"
+    expect(screen.getByText('• Alice')).toBeInTheDocument();
+    expect(screen.getByText('• Eve')).toBeInTheDocument();
+    expect(screen.getByText('+2 more')).toBeInTheDocument();
+    // Should not show 6th and 7th names directly
+    expect(screen.queryByText('• Frank')).not.toBeInTheDocument();
+  });
+
+  it('hides tooltip on mouse leave', () => {
+    const heatmapData = { '2025-06-15': 2 };
+    const heatmapNames = { '2025-06-15': ['Alice', 'Bob'] };
+    render(
+      <Calendar
+        {...defaultProps}
+        heatmapData={heatmapData}
+        heatmapNames={heatmapNames}
+        totalParticipants={5}
+      />
+    );
+
+    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
+    const tooltipTrigger = dayWithTooltip.parentElement!;
+
+    fireEvent.mouseEnter(tooltipTrigger);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.mouseLeave(tooltipTrigger);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('shows Today button when not on current month and onToday is provided', () => {
+    const onToday = vi.fn();
+    // June 2025 is not the current month (today is Feb 2026)
+    render(<Calendar {...defaultProps} onToday={onToday} />);
+
+    const todayButton = screen.getByLabelText('Go to today');
+    expect(todayButton).toBeInTheDocument();
+  });
+
+  it('hides Today button when already on current month', () => {
+    const onToday = vi.fn();
+    const today = new Date();
+    const monthYear = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+
+    render(
+      <Calendar
+        {...defaultProps}
+        currentDate={today}
+        monthYear={monthYear}
+        onToday={onToday}
+      />
+    );
+
+    expect(screen.queryByLabelText('Go to today')).not.toBeInTheDocument();
+  });
+
+  it('calls onToday when Today button is clicked', () => {
+    const onToday = vi.fn();
+    render(<Calendar {...defaultProps} onToday={onToday} />);
+
+    fireEvent.click(screen.getByLabelText('Go to today'));
+    expect(onToday).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show Today button when onToday is not provided', () => {
+    render(<Calendar {...defaultProps} />);
+    expect(screen.queryByLabelText('Go to today')).not.toBeInTheDocument();
   });
 });

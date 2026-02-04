@@ -119,6 +119,10 @@ export function Survey() {
     });
   };
 
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
   const monthYear = currentDate?.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -190,6 +194,7 @@ export function Survey() {
               currentDate={currentDate}
               onPrevMonth={prevMonth}
               onNextMonth={nextMonth}
+              onToday={goToToday}
               monthYear={monthYear}
               minDate={survey.start_date}
               maxDate={survey.end_date}

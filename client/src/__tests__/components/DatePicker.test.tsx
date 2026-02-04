@@ -20,9 +20,11 @@ describe('DatePicker', () => {
 
     fireEvent.click(getMainButton());
 
-    // Should show month/year header and day headers
-    expect(screen.getByText('Su')).toBeInTheDocument();
-    expect(screen.getByText('Mo')).toBeInTheDocument();
+    // Should show day headers starting from Monday
+    const headers = screen.getAllByText(/^(Mo|Tu|We|Th|Fr|Sa|Su)$/);
+    expect(headers).toHaveLength(7);
+    expect(headers[0]).toHaveTextContent('Mo');
+    expect(headers[6]).toHaveTextContent('Su');
   });
 
   it('calls onChange when a date is selected', () => {
@@ -43,13 +45,13 @@ describe('DatePicker', () => {
 
     // Open the picker
     fireEvent.click(getMainButton());
-    expect(screen.getByText('Su')).toBeInTheDocument();
+    expect(screen.getByText('Mo')).toBeInTheDocument();
 
     // Click on a day
     fireEvent.click(screen.getByText('20'));
 
     // Dropdown should be closed (day headers not visible)
-    expect(screen.queryByText('Su')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mo')).not.toBeInTheDocument();
   });
 
   it('navigates to previous month', () => {

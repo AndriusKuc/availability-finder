@@ -1,5 +1,5 @@
 import { useCallback, useState, useRef } from 'react';
-import { Button } from '@/components/ui';
+import { Button, Tooltip } from '@/components/ui';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 
 interface CalendarProps {
@@ -8,6 +8,7 @@ interface CalendarProps {
   currentDate: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  onToday?: () => void;
   monthYear: string;
   minDate?: string;
   maxDate?: string;
@@ -23,6 +24,7 @@ export function Calendar({
   currentDate,
   onPrevMonth,
   onNextMonth,
+  onToday,
   monthYear,
   minDate,
   maxDate,
@@ -38,8 +40,13 @@ export function Calendar({
   const month = currentDate.getMonth();
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  const startDay = firstDay.getDay();
+  // Convert Sunday-based (0-6) to Monday-based (0-6)
+  const startDay = (firstDay.getDay() + 6) % 7;
   const daysInMonth = lastDay.getDate();
+
+  // Check if current view is showing today's month
+  const today = new Date();
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
 
   const formatDate = (day: number) => {
     const m = String(month + 1).padStart(2, '0');
@@ -101,6 +108,27 @@ export function Calendar({
     return Math.round((count / totalParticipants) * 10);
   };
 
+  const renderTooltipContent = (names: string[], total: number) => {
+    if (names.length === 0) return null;
+
+    const allUnavailable = names.length === total;
+    const label = allUnavailable ? 'All unavailable' : `${names.length}/${total} unavailable`;
+
+    return (
+      <div className="text-left">
+        <div className="font-semibold text-orange-300 mb-1">{label}</div>
+        <div className="text-gray-300">
+          {names.slice(0, 5).map((name, i) => (
+            <div key={i}>• {name}</div>
+          ))}
+          {names.length > 5 && (
+            <div className="text-gray-400 mt-1">+{names.length - 5} more</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const days = [];
 
   for (let i = 0; i < startDay; i++) {
@@ -129,32 +157,61 @@ export function Calendar({
       className += ' hover:bg-beige-light cursor-pointer';
     }
 
-    days.push(
+    const dayElement = (
       <div
-        key={date}
         className={className}
-        title={names.length > 0 ? `Unavailable: ${names.join(', ')}` : undefined}
         onMouseDown={() => inRange && handleDayMouseDown(date)}
         onMouseEnter={() => inRange && handleDayMouseEnter(date)}
         onMouseUp={handleMouseUp}
+        data-testid={names.length > 0 ? `day-with-tooltip-${day}` : undefined}
       >
         {day}
       </div>
     );
+
+    // Wrap with tooltip if there are unavailable names
+    if (heatmapData && names.length > 0 && inRange) {
+      days.push(
+        <Tooltip
+          key={date}
+          content={renderTooltipContent(names, totalParticipants)}
+        >
+          {dayElement}
+        </Tooltip>
+      );
+    } else {
+      days.push(
+        <div key={date}>
+          {dayElement}
+        </div>
+      );
+    }
   }
 
   return (
     <div className="my-6" onMouseLeave={handleMouseUp}>
       <div className="flex items-center justify-between mb-4">
-        <Button
-          variant="icon"
-          size="sm"
-          onClick={onPrevMonth}
-          disabled={!canGoPrev}
-          aria-label="Previous month"
-        >
-          <ChevronLeft />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="icon"
+            size="sm"
+            onClick={onPrevMonth}
+            disabled={!canGoPrev}
+            aria-label="Previous month"
+          >
+            <ChevronLeft />
+          </Button>
+          {onToday && !isCurrentMonth && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onToday}
+              aria-label="Go to today"
+            >
+              Today
+            </Button>
+          )}
+        </div>
         <h3 className="text-lg font-semibold text-gray-800">{monthYear}</h3>
         <Button
           variant="icon"
@@ -169,7 +226,7 @@ export function Calendar({
 
       <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
         <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
             <span
               key={d}
               className="py-3 text-center text-xs font-semibold text-gray-500 uppercase"
