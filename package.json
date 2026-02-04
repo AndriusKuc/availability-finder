@@ -21,7 +21,13 @@
     "build:server": "cd server && npm run build",
     "build:client": "cd client && npm run build",
     "start": "cd server && npm start",
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "cd server && npm test",
+    "test:client": "cd client && npm test",
+    "test:coverage": "npm run test:coverage:server && npm run test:coverage:client",
+    "test:coverage:server": "cd server && npm run test:coverage",
+    "test:coverage:client": "cd client && npm run test:coverage"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

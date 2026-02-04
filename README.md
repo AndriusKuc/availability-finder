@@ -2,6 +2,7 @@
 
 A simple web application for coordinating team schedules. Create surveys, share them with your team, and find the best dates for meetings, events, or gatherings.
 
+[![Tests](https://github.com/andriuskuc/availability-finder/actions/workflows/test.yml/badge.svg)](https://github.com/andriuskuc/availability-finder/actions/workflows/test.yml)
 [![GitHub](https://img.shields.io/github/license/andriuskuc/availability-finder)](https://github.com/andriuskuc/availability-finder/blob/main/LICENSE)
 
 ## Features
@@ -125,6 +126,33 @@ availability-finder/
 - `GET /api/admin/surveys/:id/submissions` - Get submissions
 - `DELETE /api/admin/surveys/:id/submissions` - Reset all submissions
 - `DELETE /api/admin/submissions/:id` - Delete single submission
+
+## Testing
+
+The project includes comprehensive tests for both frontend and backend.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run server tests only
+npm run test:server
+
+# Run client tests only
+npm run test:client
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Test Stack
+
+- **Server**: Jest + Supertest for API testing
+- **Client**: Vitest + React Testing Library for component testing
+
+Tests run automatically on every push and pull request via GitHub Actions.
 
 ## Database Migrations
 
