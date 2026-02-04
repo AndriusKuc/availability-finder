@@ -33,7 +33,7 @@ export function Tooltip({ content, children, disabled = false }: TooltipProps) {
   return (
     <div
       ref={triggerRef}
-      className="relative inline-flex"
+      className="relative"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
     >
@@ -43,7 +43,7 @@ export function Tooltip({ content, children, disabled = false }: TooltipProps) {
           ref={tooltipRef}
           role="tooltip"
           className={`
-            absolute z-50 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg
+            absolute z-[100] px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg
             whitespace-nowrap max-w-xs
             ${position === 'top'
               ? 'bottom-full left-1/2 -translate-x-1/2 mb-2'

@@ -167,7 +167,7 @@ export function Calendar({
       className += ' hover:bg-beige-light cursor-pointer';
     }
 
-    const dayElement = (
+    const dayContent = (
       <div
         className={className}
         onMouseDown={() => inRange && handleDayMouseDown(date)}
@@ -179,20 +179,22 @@ export function Calendar({
       </div>
     );
 
-    // Wrap with tooltip if there are unavailable names
-    if (heatmapData && names.length > 0 && inRange) {
+    // Wrap with tooltip if there are unavailable names, otherwise use plain wrapper
+    const hasTooltip = heatmapData && names.length > 0 && inRange;
+    if (hasTooltip) {
       days.push(
         <Tooltip
           key={date}
           content={renderTooltipContent(date, names, totalParticipants)}
         >
-          {dayElement}
+          {dayContent}
         </Tooltip>
       );
     } else {
+      // Use same structure as Tooltip for consistent grid behavior
       days.push(
-        <div key={date}>
-          {dayElement}
+        <div key={date} className="relative">
+          {dayContent}
         </div>
       );
     }
