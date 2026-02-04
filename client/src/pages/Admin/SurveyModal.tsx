@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Button, NumberStepper } from '@/components/ui';
+import { Button, NumberStepper, Tooltip } from '@/components/ui';
 import { Calendar } from '@/components/Calendar';
-import { X, Trash } from '@/components/icons';
+import { X, Trash, Link } from '@/components/icons';
 import { adminApi } from '@/services/api';
 import type { Submission, SurveyWithCount, DateRange } from '@/types';
 
@@ -19,11 +19,19 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
   const [loading, setLoading] = useState(true);
   const [nightCount, setNightCount] = useState(3);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   // Calendar state - initialize to survey start date
   const [currentDate, setCurrentDate] = useState(
     () => new Date(survey.start_date + 'T00:00:00')
   );
+
+  const copyEditLink = async (sub: Submission) => {
+    const url = `${window.location.origin}/edit/${sub.edit_token}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(sub.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const loadSubmissions = useCallback(async () => {
     setLoading(true);
@@ -234,13 +242,26 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                           {sub.unavailable_dates.length} unavailable dates
                         </p>
                       </div>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeleteSubmission(sub.id)}
-                      >
-                        <Trash size={16} />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Tooltip
+                          content={copiedId === sub.id ? 'Copied!' : 'Copy edit link'}
+                        >
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => copyEditLink(sub)}
+                          >
+                            <Link size={16} />
+                          </Button>
+                        </Tooltip>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteSubmission(sub.id)}
+                        >
+                          <Trash size={16} />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

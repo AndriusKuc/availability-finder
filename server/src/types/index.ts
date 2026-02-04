@@ -16,6 +16,7 @@ export interface Submission {
   survey_id: number;
   person_name: string;
   unavailable_dates: string[];
+  edit_token: string;
   created_at: string;
 }
 
@@ -24,6 +25,7 @@ export interface SubmissionRow {
   survey_id: number;
   person_name: string;
   unavailable_dates: string;
+  edit_token: string;
   created_at: string;
 }
 

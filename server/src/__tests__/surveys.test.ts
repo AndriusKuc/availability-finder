@@ -149,5 +149,75 @@ describe('Survey Routes', () => {
 
       expect(response.status).toBe(200);
     });
+
+    it('should return edit token on successful submission', async () => {
+      const survey = createTestSurvey();
+
+      const response = await request(app)
+        .post(`/api/surveys/${survey.code}/submit`)
+        .send({
+          personName: 'TokenUser',
+          unavailableDates: ['2025-01-15'],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.editToken).toBeDefined();
+      expect(response.body.data.editToken).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      );
+    });
+  });
+
+  describe('GET /api/surveys/edit/:token', () => {
+    it('should return submission by edit token', async () => {
+      const survey = createTestSurvey('Edit Test');
+      const submission = createTestSubmission(survey.id, 'EditUser', ['2025-03-01']);
+
+      const response = await request(app).get(`/api/surveys/edit/${submission.edit_token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.person_name).toBe('EditUser');
+      expect(response.body.data.unavailable_dates).toEqual(['2025-03-01']);
+      expect(response.body.data.survey_name).toBe('Edit Test');
+    });
+
+    it('should return 404 for invalid token', async () => {
+      const response = await request(app).get('/api/surveys/edit/invalid-token');
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Submission not found');
+    });
+  });
+
+  describe('PUT /api/surveys/edit/:token', () => {
+    it('should update submission by edit token', async () => {
+      const survey = createTestSurvey();
+      const submission = createTestSubmission(survey.id, 'UpdateUser', ['2025-03-01']);
+
+      const response = await request(app)
+        .put(`/api/surveys/edit/${submission.edit_token}`)
+        .send({
+          unavailableDates: ['2025-03-01', '2025-03-02', '2025-03-03'],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+
+      // Verify the update
+      const getResponse = await request(app).get(`/api/surveys/edit/${submission.edit_token}`);
+      expect(getResponse.body.data.unavailable_dates).toEqual(['2025-03-01', '2025-03-02', '2025-03-03']);
+    });
+
+    it('should return 404 for invalid token', async () => {
+      const response = await request(app)
+        .put('/api/surveys/edit/invalid-token')
+        .send({
+          unavailableDates: ['2025-03-01'],
+        });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Submission not found');
+    });
   });
 });

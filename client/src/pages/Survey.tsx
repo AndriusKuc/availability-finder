@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, Button, Input } from '@/components/ui';
 import { Calendar } from '@/components/Calendar';
-import { ChevronLeft, ArrowRight, Check, CheckCircle } from '@/components/icons';
+import { ChevronLeft, ArrowRight, Check, CheckCircle, Link as LinkIcon } from '@/components/icons';
 import { surveyApi } from '@/services/api';
 import type { Survey as SurveyType } from '@/types';
 
@@ -27,6 +27,8 @@ export function Survey() {
   const [personName, setPersonName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editToken, setEditToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Calendar state
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
@@ -80,12 +82,23 @@ export function Survey() {
     setError('');
 
     try {
-      await surveyApi.submit(code!, personName.trim(), Array.from(selectedDates));
+      const res = await surveyApi.submit(code!, personName.trim(), Array.from(selectedDates));
+      setEditToken(res.data?.editToken || null);
       setStep('success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const editUrl = editToken ? `${window.location.origin}/edit/${editToken}` : '';
+
+  const copyEditUrl = async () => {
+    if (editUrl) {
+      await navigator.clipboard.writeText(editUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -176,6 +189,10 @@ export function Survey() {
                 <ArrowRight />
               </Button>
             </form>
+
+            <p className="text-xs text-gray-400 mt-6 text-center">
+              Need to modify a previous submission? Ask the admin for your edit link.
+            </p>
           </div>
         )}
 
@@ -235,9 +252,36 @@ export function Survey() {
             <h2 className="text-xl font-semibold text-success mb-2">
               Thank you!
             </h2>
-            <p className="text-gray-500 mb-6">
+            <p className="text-gray-500 mb-4">
               Your availability has been submitted successfully.
             </p>
+
+            {editToken && (
+              <div className="bg-beige-light rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm font-semibold text-gray-700 mb-2">
+                  Save your edit link:
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Use this link to modify your submission later
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={editUrl}
+                    className="flex-1 text-xs bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-600"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={copyEditUrl}
+                  >
+                    {copied ? 'Copied!' : <LinkIcon size={16} />}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <Link to="/">
               <Button variant="secondary">Back to Home</Button>
             </Link>

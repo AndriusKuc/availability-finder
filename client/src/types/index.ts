@@ -16,7 +16,15 @@ export interface Submission {
   survey_id: number;
   person_name: string;
   unavailable_dates: string[];
+  edit_token: string;
   created_at: string;
+}
+
+export interface EditSubmission extends Submission {
+  survey_name: string;
+  survey_code: string;
+  start_date: string;
+  end_date: string;
 }
 
 export interface ApiResponse<T = unknown> {

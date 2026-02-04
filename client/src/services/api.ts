@@ -3,6 +3,7 @@ import type {
   Survey,
   SurveyWithCount,
   Submission,
+  EditSubmission,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -40,9 +41,19 @@ export const surveyApi = {
     ),
 
   submit: (code: string, personName: string, unavailableDates: string[]) =>
-    request<void>(`/surveys/${code}/submit`, {
+    request<{ editToken: string }>(`/surveys/${code}/submit`, {
       method: 'POST',
       body: JSON.stringify({ personName, unavailableDates }),
+    }),
+
+  // Edit submission by token
+  getByToken: (token: string) =>
+    request<EditSubmission>(`/surveys/edit/${token}`),
+
+  updateByToken: (token: string, unavailableDates: string[]) =>
+    request<void>(`/surveys/edit/${token}`, {
+      method: 'PUT',
+      body: JSON.stringify({ unavailableDates }),
     }),
 };
 

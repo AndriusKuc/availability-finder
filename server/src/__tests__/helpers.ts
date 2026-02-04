@@ -1,7 +1,8 @@
 import request from 'supertest';
+import { randomUUID } from 'crypto';
 import { Express } from 'express';
 import db from '../config/database';
-import type { Survey } from '../types';
+import type { Survey, SubmissionRow } from '../types';
 
 export function createTestSurvey(
   name = 'Test Survey',
@@ -21,10 +22,13 @@ export function createTestSubmission(
   surveyId: number,
   personName: string,
   unavailableDates: string[] = []
-): void {
-  db.prepare(
-    'INSERT INTO submissions (survey_id, person_name, unavailable_dates) VALUES (?, ?, ?)'
-  ).run(surveyId, personName, JSON.stringify(unavailableDates));
+): SubmissionRow {
+  const editToken = randomUUID();
+  const result = db.prepare(
+    'INSERT INTO submissions (survey_id, person_name, unavailable_dates, edit_token) VALUES (?, ?, ?, ?)'
+  ).run(surveyId, personName, JSON.stringify(unavailableDates), editToken);
+
+  return db.prepare('SELECT * FROM submissions WHERE id = ?').get(result.lastInsertRowid) as SubmissionRow;
 }
 
 export async function loginAsAdmin(app: Express): Promise<string[]> {

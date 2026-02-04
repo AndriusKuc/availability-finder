@@ -1,4 +1,5 @@
 import type { Database as DatabaseType } from 'better-sqlite3';
+import { randomUUID } from 'crypto';
 
 export interface Migration {
   version: number;
@@ -51,6 +52,33 @@ export const migrations: Migration[] = [
         nextYear.setFullYear(nextYear.getFullYear() + 1);
         const nextYearStr = nextYear.toISOString().split('T')[0];
         db.exec(`ALTER TABLE surveys ADD COLUMN end_date TEXT NOT NULL DEFAULT '${nextYearStr}'`);
+      }
+    },
+  },
+  {
+    version: 3,
+    name: 'add_submission_edit_token',
+    up: (db) => {
+      // Check if column already exists
+      const columns = db
+        .prepare("PRAGMA table_info(submissions)")
+        .all() as { name: string }[];
+      const columnNames = columns.map((c) => c.name);
+
+      if (!columnNames.includes('edit_token')) {
+        // Add the column (SQLite doesn't support adding UNIQUE constraint in ALTER)
+        db.exec(`ALTER TABLE submissions ADD COLUMN edit_token TEXT`);
+
+        // Generate tokens for existing submissions
+        const submissions = db.prepare('SELECT id FROM submissions').all() as { id: number }[];
+        const updateStmt = db.prepare('UPDATE submissions SET edit_token = ? WHERE id = ?');
+
+        for (const sub of submissions) {
+          updateStmt.run(randomUUID(), sub.id);
+        }
+
+        // Create index for fast token lookups
+        db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_edit_token ON submissions(edit_token)`);
       }
     },
   },

@@ -205,6 +205,20 @@ describe('Admin Routes', () => {
       expect(response.body.data).toHaveLength(2);
       expect(response.body.data[0].unavailable_dates).toBeInstanceOf(Array);
     });
+
+    it('should include edit_token for each submission', async () => {
+      const cookies = await loginAsAdmin(app);
+      const auth = makeAuthenticatedRequest(app, cookies);
+
+      const survey = createTestSurvey();
+      const submission = createTestSubmission(survey.id, 'Charlie', ['2025-02-01']);
+
+      const response = await auth.get(`/api/admin/surveys/${survey.id}/submissions`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data[0].edit_token).toBeDefined();
+      expect(response.body.data[0].edit_token).toBe(submission.edit_token);
+    });
   });
 
   describe('DELETE /api/admin/surveys/:id/submissions', () => {
