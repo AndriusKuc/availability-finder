@@ -86,7 +86,7 @@ npm start
 ## Project Structure
 
 ```
-team-availability/
+availability-finder/
 ├── client/                 # React frontend
 │   ├── src/
 │   │   ├── components/     # Reusable UI components
@@ -136,10 +136,12 @@ team-availability/
    - `ADMIN_PASSWORD`
    - `SESSION_SECRET`
    - `NODE_ENV=production`
-   - `CLIENT_URL` (your Railway domain)
-4. Deploy
-
-The SQLite database is stored in the `data/` directory and persists across deployments.
+4. **Add a Volume for persistent storage:**
+   - Go to your service → **Settings** → **Volumes**
+   - Click **+ New Volume**
+   - Set **Mount Path** to `/app/data`
+   - This ensures your SQLite database persists across deployments
+5. Deploy
 
 ### Other Platforms
 
