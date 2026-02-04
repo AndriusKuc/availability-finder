@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/Layout';
-import { Card, Button, Input } from '@/components/ui';
+import { Card, Button, Input, DatePicker } from '@/components/ui';
 import { Plus, Trash, Copy } from '@/components/icons';
 import { adminApi } from '@/services/api';
 import { SurveyModal } from './SurveyModal';
@@ -116,23 +116,25 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Earliest date
                 </label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={setStartDate}
+                  max={endDate || undefined}
+                  placeholder="Select start date"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Latest date
                 </label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={setEndDate}
+                  min={startDate || undefined}
+                  placeholder="Select end date"
                 />
               </div>
             </div>
