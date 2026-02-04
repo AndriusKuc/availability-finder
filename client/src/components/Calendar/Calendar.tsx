@@ -9,6 +9,8 @@ interface CalendarProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   monthYear: string;
+  minDate?: string;
+  maxDate?: string;
   heatmapData?: Record<string, number>;
   heatmapNames?: Record<string, string[]>;
   totalParticipants?: number;
@@ -22,6 +24,8 @@ export function Calendar({
   onPrevMonth,
   onNextMonth,
   monthYear,
+  minDate,
+  maxDate,
   heatmapData,
   heatmapNames,
   totalParticipants = 0,
@@ -43,19 +47,39 @@ export function Calendar({
     return `${year}-${m}-${d}`;
   };
 
+  const isDateInRange = (date: string): boolean => {
+    if (minDate && date < minDate) return false;
+    if (maxDate && date > maxDate) return false;
+    return true;
+  };
+
+  // Check if we can navigate to previous/next month
+  const canGoPrev = !minDate || (() => {
+    const prevMonth = new Date(year, month - 1, 1);
+    const prevMonthEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0);
+    const prevMonthEndStr = `${prevMonthEnd.getFullYear()}-${String(prevMonthEnd.getMonth() + 1).padStart(2, '0')}-${String(prevMonthEnd.getDate()).padStart(2, '0')}`;
+    return prevMonthEndStr >= minDate;
+  })();
+
+  const canGoNext = !maxDate || (() => {
+    const nextMonth = new Date(year, month + 1, 1);
+    const nextMonthStartStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
+    return nextMonthStartStr <= maxDate;
+  })();
+
   const handleDayMouseDown = useCallback(
     (date: string) => {
-      if (readOnly) return;
+      if (readOnly || !isDateInRange(date)) return;
       setIsDragging(true);
       dragModeRef.current = selectedDates.has(date) ? 'deselect' : 'select';
       onToggleDate(date);
     },
-    [readOnly, selectedDates, onToggleDate]
+    [readOnly, selectedDates, onToggleDate, minDate, maxDate]
   );
 
   const handleDayMouseEnter = useCallback(
     (date: string) => {
-      if (!isDragging || readOnly) return;
+      if (!isDragging || readOnly || !isDateInRange(date)) return;
       const isSelected = selectedDates.has(date);
       if (dragModeRef.current === 'select' && !isSelected) {
         onToggleDate(date);
@@ -63,7 +87,7 @@ export function Calendar({
         onToggleDate(date);
       }
     },
-    [isDragging, readOnly, selectedDates, onToggleDate]
+    [isDragging, readOnly, selectedDates, onToggleDate, minDate, maxDate]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -90,11 +114,14 @@ export function Calendar({
     const isSelected = selectedDates.has(date);
     const intensity = heatmapData ? getIntensity(date) : 0;
     const names = heatmapNames?.[date] || [];
+    const inRange = isDateInRange(date);
 
     let className =
       'aspect-square flex items-center justify-center text-sm font-medium select-none transition-all duration-200';
 
-    if (heatmapData) {
+    if (!inRange) {
+      className += ' text-gray-300 cursor-not-allowed';
+    } else if (heatmapData) {
       className += ` intensity-${intensity}`;
     } else if (isSelected) {
       className += ' bg-primary text-white hover:bg-primary-dark cursor-pointer';
@@ -107,8 +134,8 @@ export function Calendar({
         key={date}
         className={className}
         title={names.length > 0 ? `Unavailable: ${names.join(', ')}` : undefined}
-        onMouseDown={() => handleDayMouseDown(date)}
-        onMouseEnter={() => handleDayMouseEnter(date)}
+        onMouseDown={() => inRange && handleDayMouseDown(date)}
+        onMouseEnter={() => inRange && handleDayMouseEnter(date)}
         onMouseUp={handleMouseUp}
       >
         {day}
@@ -119,11 +146,23 @@ export function Calendar({
   return (
     <div className="my-6" onMouseLeave={handleMouseUp}>
       <div className="flex items-center justify-between mb-4">
-        <Button variant="icon" size="sm" onClick={onPrevMonth} aria-label="Previous month">
+        <Button
+          variant="icon"
+          size="sm"
+          onClick={onPrevMonth}
+          disabled={!canGoPrev}
+          aria-label="Previous month"
+        >
           <ChevronLeft />
         </Button>
         <h3 className="text-lg font-semibold text-gray-800">{monthYear}</h3>
-        <Button variant="icon" size="sm" onClick={onNextMonth} aria-label="Next month">
+        <Button
+          variant="icon"
+          size="sm"
+          onClick={onNextMonth}
+          disabled={!canGoNext}
+          aria-label="Next month"
+        >
           <ChevronRight />
         </Button>
       </div>

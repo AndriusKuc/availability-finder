@@ -63,10 +63,10 @@ export const adminApi = {
   getSurveys: () =>
     request<SurveyWithCount[]>('/admin/surveys'),
 
-  createSurvey: (name: string) =>
+  createSurvey: (name: string, startDate: string, endDate: string) =>
     request<Survey>('/admin/surveys', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, startDate, endDate }),
     }),
 
   deleteSurvey: (id: number) =>

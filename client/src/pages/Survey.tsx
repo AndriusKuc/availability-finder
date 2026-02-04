@@ -9,6 +9,15 @@ import type { Survey as SurveyType } from '@/types';
 
 type Step = 'name' | 'calendar' | 'success';
 
+function formatDisplayDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export function Survey() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
@@ -20,7 +29,7 @@ export function Survey() {
   const [loading, setLoading] = useState(false);
 
   // Calendar state
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -31,7 +40,12 @@ export function Survey() {
 
     surveyApi
       .getByCode(code)
-      .then((res) => setSurvey(res.data!))
+      .then((res) => {
+        const surveyData = res.data!;
+        setSurvey(surveyData);
+        // Initialize calendar to the survey start date
+        setCurrentDate(new Date(surveyData.start_date + 'T00:00:00'));
+      })
       .catch(() => navigate('/'));
   }, [code, navigate]);
 
@@ -89,6 +103,7 @@ export function Survey() {
 
   const prevMonth = () => {
     setCurrentDate((prev) => {
+      if (!prev) return prev;
       const next = new Date(prev);
       next.setMonth(next.getMonth() - 1);
       return next;
@@ -97,18 +112,19 @@ export function Survey() {
 
   const nextMonth = () => {
     setCurrentDate((prev) => {
+      if (!prev) return prev;
       const next = new Date(prev);
       next.setMonth(next.getMonth() + 1);
       return next;
     });
   };
 
-  const monthYear = currentDate.toLocaleDateString('en-US', {
+  const monthYear = currentDate?.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
-  });
+  }) || '';
 
-  if (!survey) {
+  if (!survey || !currentDate) {
     return (
       <Layout>
         <p className="text-gray-500">Loading...</p>
@@ -128,6 +144,9 @@ export function Survey() {
             Back
           </Link>
           <h1 className="text-xl font-bold text-gray-900 mt-3">{survey.name}</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {formatDisplayDate(survey.start_date)} – {formatDisplayDate(survey.end_date)}
+          </p>
         </div>
 
         {step === 'name' && (
@@ -172,6 +191,8 @@ export function Survey() {
               onPrevMonth={prevMonth}
               onNextMonth={nextMonth}
               monthYear={monthYear}
+              minDate={survey.start_date}
+              maxDate={survey.end_date}
             />
 
             <div className="flex justify-center gap-8 my-4">

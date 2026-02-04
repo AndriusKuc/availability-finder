@@ -10,11 +10,23 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
+function formatDisplayDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [surveys, setSurveys] = useState<SurveyWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [newSurveyName, setNewSurveyName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
   const [selectedSurvey, setSelectedSurvey] = useState<SurveyWithCount | null>(
     null
   );
@@ -36,15 +48,30 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
   const handleCreateSurvey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSurveyName.trim()) return;
+    setError('');
+
+    if (!newSurveyName.trim()) {
+      setError('Survey name is required');
+      return;
+    }
+    if (!startDate || !endDate) {
+      setError('Start and end dates are required');
+      return;
+    }
+    if (startDate > endDate) {
+      setError('Start date must be before end date');
+      return;
+    }
 
     setCreating(true);
     try {
-      await adminApi.createSurvey(newSurveyName.trim());
+      await adminApi.createSurvey(newSurveyName.trim(), startDate, endDate);
       setNewSurveyName('');
+      setStartDate('');
+      setEndDate('');
       loadSurveys();
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Failed to create survey');
     } finally {
       setCreating(false);
     }
@@ -80,17 +107,42 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
             Create New Survey
           </h2>
-          <form onSubmit={handleCreateSurvey} className="flex gap-4">
+          <form onSubmit={handleCreateSurvey} className="space-y-4">
             <Input
               type="text"
               value={newSurveyName}
               onChange={(e) => setNewSurveyName(e.target.value)}
               placeholder="Survey name (e.g., Q1 Team Meetup)"
-              className="flex-1"
             />
-            <Button type="submit" disabled={creating || !newSurveyName.trim()}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Earliest date
+                </label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Latest date
+                </label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+            {error && <p className="text-danger text-sm">{error}</p>}
+            <Button
+              type="submit"
+              disabled={creating || !newSurveyName.trim() || !startDate || !endDate}
+            >
               <Plus size={18} />
-              Create
+              Create Survey
             </Button>
           </form>
         </Card>
@@ -117,12 +169,15 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                     <h3 className="font-semibold text-gray-900 mb-1">
                       {survey.name}
                     </h3>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-2">
                       <span>
                         Code:{' '}
                         <strong className="text-primary">{survey.code}</strong>
                       </span>
                       <span>{survey.submission_count} submissions</span>
+                    </div>
+                    <div className="text-sm text-gray-500 mb-3">
+                      {formatDisplayDate(survey.start_date)} – {formatDisplayDate(survey.end_date)}
                     </div>
                     <div className="flex gap-2">
                       <input

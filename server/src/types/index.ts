@@ -2,6 +2,8 @@ export interface Survey {
   id: number;
   code: string;
   name: string;
+  start_date: string;
+  end_date: string;
   created_at: string;
 }
 

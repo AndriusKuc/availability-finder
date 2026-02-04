@@ -97,7 +97,7 @@ availability-finder/
 │   └── ...
 ├── server/                 # Express backend
 │   ├── src/
-│   │   ├── config/         # Database setup
+│   │   ├── config/         # Database and migrations
 │   │   ├── middleware/     # Express middleware
 │   │   ├── routes/         # API routes
 │   │   └── types/          # TypeScript types
@@ -125,6 +125,34 @@ availability-finder/
 - `GET /api/admin/surveys/:id/submissions` - Get submissions
 - `DELETE /api/admin/surveys/:id/submissions` - Reset all submissions
 - `DELETE /api/admin/submissions/:id` - Delete single submission
+
+## Database Migrations
+
+The application uses a lightweight migration system built on SQLite's `user_version` pragma. Migrations run automatically on server startup.
+
+### How It Works
+
+- Migration files are in `server/src/config/migrations.ts`
+- Each migration has a version number and runs exactly once
+- The current schema version is tracked in the database itself
+- Migrations run in transactions for safety
+
+### Adding New Migrations
+
+To add a schema change, append a new migration to the `migrations` array:
+
+```typescript
+{
+  version: 3,
+  name: 'your_migration_name',
+  up: (db) => {
+    // Your schema changes here
+    db.exec(`ALTER TABLE ...`);
+  },
+},
+```
+
+Migrations are idempotent where possible - they check for existing columns/tables before making changes.
 
 ## Deployment
 

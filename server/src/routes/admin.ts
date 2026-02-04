@@ -51,10 +51,24 @@ router.get('/surveys', requireAuth, (req: Request, res: Response): void => {
 
 // Create survey
 router.post('/surveys', requireAuth, (req: Request, res: Response): void => {
-  const { name } = req.body as { name: string };
+  const { name, startDate, endDate } = req.body as {
+    name: string;
+    startDate: string;
+    endDate: string;
+  };
 
   if (!name?.trim()) {
     res.status(400).json({ success: false, error: 'Survey name is required' });
+    return;
+  }
+
+  if (!startDate || !endDate) {
+    res.status(400).json({ success: false, error: 'Start and end dates are required' });
+    return;
+  }
+
+  if (startDate > endDate) {
+    res.status(400).json({ success: false, error: 'Start date must be before end date' });
     return;
   }
 
@@ -62,8 +76,8 @@ router.post('/surveys', requireAuth, (req: Request, res: Response): void => {
 
   try {
     const result = db
-      .prepare('INSERT INTO surveys (code, name) VALUES (?, ?)')
-      .run(code, name.trim());
+      .prepare('INSERT INTO surveys (code, name, start_date, end_date) VALUES (?, ?, ?, ?)')
+      .run(code, name.trim(), startDate, endDate);
 
     const survey = db
       .prepare('SELECT * FROM surveys WHERE id = ?')

@@ -19,8 +19,10 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
   const [loading, setLoading] = useState(true);
   const [nightCount, setNightCount] = useState(3);
 
-  // Calendar state
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // Calendar state - initialize to survey start date
+  const [currentDate, setCurrentDate] = useState(
+    () => new Date(survey.start_date + 'T00:00:00')
+  );
 
   const loadSubmissions = useCallback(async () => {
     setLoading(true);
@@ -68,7 +70,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
     return { counts: data, names };
   }, [submissions]);
 
-  // Find available date ranges
+  // Find available date ranges within the survey's date range
   const availableRanges = useMemo(() => {
     if (submissions.length === 0) return [];
 
@@ -77,9 +79,8 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
       sub.unavailable_dates.forEach((date) => unavailableDates.add(date));
     });
 
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setFullYear(endDate.getFullYear() + 1);
+    const startDate = new Date(survey.start_date + 'T00:00:00');
+    const endDate = new Date(survey.end_date + 'T00:00:00');
 
     const ranges: DateRange[] = [];
     let currentRange: DateRange | null = null;
@@ -91,7 +92,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
       return `${y}-${m}-${day}`;
     };
 
-    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateStr = formatDate(d);
       const isAvailable = !unavailableDates.has(dateStr);
 
@@ -115,7 +116,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
     }
 
     return ranges;
-  }, [submissions, nightCount]);
+  }, [submissions, nightCount, survey.start_date, survey.end_date]);
 
   const prevMonth = () => {
     setCurrentDate((prev) => {
@@ -234,6 +235,8 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                 onPrevMonth={prevMonth}
                 onNextMonth={nextMonth}
                 monthYear={monthYear}
+                minDate={survey.start_date}
+                maxDate={survey.end_date}
                 heatmapData={heatmapData.counts}
                 heatmapNames={heatmapData.names}
                 totalParticipants={submissions.length}
