@@ -108,7 +108,16 @@ export function Calendar({
     return Math.round((count / totalParticipants) * 10);
   };
 
-  const renderTooltipContent = (names: string[], total: number) => {
+  const formatTooltipDate = (dateStr: string): string => {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const renderTooltipContent = (dateStr: string, names: string[], total: number) => {
     if (names.length === 0) return null;
 
     const allUnavailable = names.length === total;
@@ -116,6 +125,7 @@ export function Calendar({
 
     return (
       <div className="text-left">
+        <div className="text-white font-medium mb-1">{formatTooltipDate(dateStr)}</div>
         <div className="font-semibold text-orange-300 mb-1">{label}</div>
         <div className="text-gray-300">
           {names.slice(0, 5).map((name, i) => (
@@ -150,7 +160,7 @@ export function Calendar({
     if (!inRange) {
       className += ' text-gray-300 cursor-not-allowed';
     } else if (heatmapData) {
-      className += ` intensity-${intensity}`;
+      className += ` intensity-${intensity} hover:ring-2 hover:ring-gray-400 hover:ring-inset cursor-default`;
     } else if (isSelected) {
       className += ' bg-primary text-white hover:bg-primary-dark cursor-pointer';
     } else {
@@ -174,7 +184,7 @@ export function Calendar({
       days.push(
         <Tooltip
           key={date}
-          content={renderTooltipContent(names, totalParticipants)}
+          content={renderTooltipContent(date, names, totalParticipants)}
         >
           {dayElement}
         </Tooltip>
