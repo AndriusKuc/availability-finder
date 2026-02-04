@@ -3,6 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { DatePicker } from '@/components/ui/DatePicker';
 
 describe('DatePicker', () => {
+  const getMainButton = () => screen.getAllByRole('button')[0];
+
   it('renders with placeholder when no value', () => {
     render(<DatePicker value="" onChange={() => {}} placeholder="Select date" />);
     expect(screen.getByText('Select date')).toBeInTheDocument();
@@ -13,42 +15,110 @@ describe('DatePicker', () => {
     expect(screen.getByText('Jun 15, 2025')).toBeInTheDocument();
   });
 
-  it('calls onChange when date is selected', () => {
+  it('opens calendar dropdown when clicked', () => {
+    render(<DatePicker value="" onChange={() => {}} />);
+
+    fireEvent.click(getMainButton());
+
+    // Should show month/year header and day headers
+    expect(screen.getByText('Su')).toBeInTheDocument();
+    expect(screen.getByText('Mo')).toBeInTheDocument();
+  });
+
+  it('calls onChange when a date is selected', () => {
     const handleChange = vi.fn();
-    render(<DatePicker value="" onChange={handleChange} />);
+    render(<DatePicker value="2025-06-15" onChange={handleChange} />);
 
-    const input = screen.getByLabelText('Select date');
-    fireEvent.change(input, { target: { value: '2025-07-20' } });
+    // Open the picker
+    fireEvent.click(getMainButton());
 
-    expect(handleChange).toHaveBeenCalledWith('2025-07-20');
+    // Click on day 20
+    fireEvent.click(screen.getByText('20'));
+
+    expect(handleChange).toHaveBeenCalledWith('2025-06-20');
   });
 
-  it('applies min constraint to input', () => {
-    render(<DatePicker value="" onChange={() => {}} min="2025-01-01" />);
-    const input = screen.getByLabelText('Select date');
-    expect(input).toHaveAttribute('min', '2025-01-01');
+  it('closes dropdown after selecting a date', () => {
+    render(<DatePicker value="2025-06-15" onChange={() => {}} />);
+
+    // Open the picker
+    fireEvent.click(getMainButton());
+    expect(screen.getByText('Su')).toBeInTheDocument();
+
+    // Click on a day
+    fireEvent.click(screen.getByText('20'));
+
+    // Dropdown should be closed (day headers not visible)
+    expect(screen.queryByText('Su')).not.toBeInTheDocument();
   });
 
-  it('applies max constraint to input', () => {
-    render(<DatePicker value="" onChange={() => {}} max="2025-12-31" />);
-    const input = screen.getByLabelText('Select date');
-    expect(input).toHaveAttribute('max', '2025-12-31');
+  it('navigates to previous month', () => {
+    render(<DatePicker value="2025-06-15" onChange={() => {}} />);
+
+    fireEvent.click(getMainButton());
+    expect(screen.getByText('June 2025')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Previous month'));
+    expect(screen.getByText('May 2025')).toBeInTheDocument();
+  });
+
+  it('navigates to next month', () => {
+    render(<DatePicker value="2025-06-15" onChange={() => {}} />);
+
+    fireEvent.click(getMainButton());
+    expect(screen.getByText('June 2025')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Next month'));
+    expect(screen.getByText('July 2025')).toBeInTheDocument();
+  });
+
+  it('disables dates before min date', () => {
+    render(<DatePicker value="" onChange={() => {}} min="2025-06-15" />);
+
+    fireEvent.click(getMainButton());
+
+    // Day 10 should be disabled (before min date of 15th)
+    const day10 = screen.getByText('10');
+    expect(day10).toBeDisabled();
+  });
+
+  it('disables dates after max date', () => {
+    render(<DatePicker value="" onChange={() => {}} max="2025-06-15" />);
+
+    fireEvent.click(getMainButton());
+
+    // Day 20 should be disabled (after max date of 15th)
+    const day20 = screen.getByText('20');
+    expect(day20).toBeDisabled();
   });
 
   it('can be disabled', () => {
     render(<DatePicker value="" onChange={() => {}} disabled />);
-    const input = screen.getByLabelText('Select date');
-    expect(input).toBeDisabled();
+    expect(getMainButton()).toBeDisabled();
   });
 
-  it('uses custom placeholder', () => {
-    render(<DatePicker value="" onChange={() => {}} placeholder="Pick a date" />);
-    expect(screen.getByText('Pick a date')).toBeInTheDocument();
+  it('clears value when Clear button is clicked', () => {
+    const handleChange = vi.fn();
+    render(<DatePicker value="2025-06-15" onChange={handleChange} />);
+
+    fireEvent.click(getMainButton());
+    fireEvent.click(screen.getByText('Clear'));
+
+    expect(handleChange).toHaveBeenCalledWith('');
   });
 
   it('renders calendar icon', () => {
     const { container } = render(<DatePicker value="" onChange={() => {}} />);
     const svg = container.querySelector('svg');
     expect(svg).toBeInTheDocument();
+  });
+
+  it('highlights selected date', () => {
+    render(<DatePicker value="2025-06-15" onChange={() => {}} />);
+
+    fireEvent.click(getMainButton());
+
+    const day15 = screen.getByText('15');
+    expect(day15).toHaveClass('bg-primary');
   });
 });
