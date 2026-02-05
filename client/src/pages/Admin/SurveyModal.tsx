@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button, NumberStepper, Tooltip } from '@/components/ui';
 import { Calendar } from '@/components/Calendar';
-import { X, Trash, Link, ChevronRight, Moon, Users } from '@/components/icons';
+import { X, Trash, Link, ChevronRight, Moon, Users, UserX } from '@/components/icons';
 import { adminApi } from '@/services/api';
 import type { Submission, SurveyWithCount, DateRange } from '@/types';
 
@@ -23,6 +23,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [expandedRanges, setExpandedRanges] = useState<Set<number>>(new Set());
+  const [excludedPeople, setExcludedPeople] = useState<Set<string>>(new Set());
 
   // Calendar state - initialize to survey start date
   const [currentDate, setCurrentDate] = useState(
@@ -48,12 +49,29 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
     });
   };
 
-  // Get attendees info for a date range
+  const toggleExcludePerson = (name: string) => {
+    setExcludedPeople((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  // Filtered submissions (excluding excluded people)
+  const includedSubmissions = useMemo(() => {
+    return submissions.filter((sub) => !excludedPeople.has(sub.person_name));
+  }, [submissions, excludedPeople]);
+
+  // Get attendees info for a date range (only included people)
   const getAttendeesForRange = (range: DateRange) => {
     const canAttend: string[] = [];
     const cannotAttend: string[] = [];
 
-    submissions.forEach((sub) => {
+    includedSubmissions.forEach((sub) => {
       // Check if person has any unavailable dates in this range
       const hasConflict = sub.unavailable_dates.some((date) => {
         return date >= range.start && date <= range.end;
@@ -129,13 +147,13 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
     return new Set(person?.unavailable_dates || []);
   }, [submissions, selectedPerson]);
 
-  // Find available date ranges within the survey's date range
+  // Find available date ranges within the survey's date range (using included submissions only)
   const availableRanges = useMemo(() => {
-    if (submissions.length === 0) return [];
+    if (includedSubmissions.length === 0) return [];
 
-    // Count unavailable people per date
+    // Count unavailable people per date (only from included submissions)
     const unavailableCount: Record<string, number> = {};
-    submissions.forEach((sub) => {
+    includedSubmissions.forEach((sub) => {
       sub.unavailable_dates.forEach((date) => {
         unavailableCount[date] = (unavailableCount[date] || 0) + 1;
       });
@@ -143,7 +161,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
 
     const startDate = new Date(survey.start_date + 'T00:00:00');
     const endDate = new Date(survey.end_date + 'T00:00:00');
-    const requiredAttendees = minAttendees ?? submissions.length;
+    const requiredAttendees = minAttendees ?? includedSubmissions.length;
 
     const ranges: DateRange[] = [];
     let currentRange: DateRange | null = null;
@@ -174,7 +192,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
 
       // Check if enough people are available
       const unavailable = unavailableCount[dateStr] || 0;
-      const available = submissions.length - unavailable;
+      const available = includedSubmissions.length - unavailable;
       const isAvailable = available >= requiredAttendees;
 
       if (isAvailable) {
@@ -197,7 +215,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
     }
 
     return ranges;
-  }, [submissions, nightCount, minAttendees, excludeWeekends, survey.start_date, survey.end_date]);
+  }, [includedSubmissions, nightCount, minAttendees, excludeWeekends, survey.start_date, survey.end_date]);
 
   const prevMonth = () => {
     setCurrentDate((prev) => {
@@ -425,6 +443,37 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
 
           {tab === 'summary' && (
             <div>
+              {/* Exclude people section */}
+              {submissions.length > 0 && (
+                <div className="mb-6">
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+                    <UserX size={16} className="text-gray-500" />
+                    Exclude people
+                    {excludedPeople.size > 0 && (
+                      <span className="text-xs text-gray-400">({excludedPeople.size} excluded)</span>
+                    )}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {submissions.map((sub) => {
+                      const isExcluded = excludedPeople.has(sub.person_name);
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => toggleExcludePerson(sub.person_name)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                            isExcluded
+                              ? 'bg-red-100 text-red-700 line-through'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {sub.person_name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-end gap-6 mb-6">
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
@@ -446,11 +495,11 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                     Min attendees
                   </label>
                   <NumberStepper
-                    value={minAttendees ?? submissions.length}
+                    value={minAttendees ?? includedSubmissions.length}
                     onChange={setMinAttendees}
                     min={1}
-                    max={submissions.length || 1}
-                    label={`of ${submissions.length}`}
+                    max={includedSubmissions.length || 1}
+                    label={`of ${includedSubmissions.length}`}
                   />
                 </div>
 
@@ -470,15 +519,19 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                   <p className="text-gray-500 text-center">
                     No submissions to analyze.
                   </p>
+                ) : includedSubmissions.length === 0 ? (
+                  <p className="text-gray-500 text-center">
+                    All people are excluded. Include at least one person.
+                  </p>
                 ) : availableRanges.length === 0 ? (
                   <p className="text-gray-500 text-center">
                     No {nightCount}+ night periods found where at least{' '}
-                    {minAttendees ?? submissions.length} people are available.
+                    {minAttendees ?? includedSubmissions.length} people are available.
                   </p>
                 ) : (
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-4">
-                      {nightCount}+ night periods with {minAttendees ?? submissions.length}+ attendees ({availableRanges.length}{' '}
+                      {nightCount}+ night periods with {minAttendees ?? includedSubmissions.length}+ attendees ({availableRanges.length}{' '}
                       found):
                     </h4>
                     <div className="space-y-3">
@@ -486,6 +539,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                         const isExpanded = expandedRanges.has(i);
                         const attendeesInfo = getAttendeesForRange(range);
                         const { canAttend, cannotAttend } = attendeesInfo;
+                        const hasExcluded = excludedPeople.size > 0;
 
                         return (
                           <div
@@ -507,10 +561,15 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="flex items-center gap-1.5 px-3 py-1 text-sm font-semibold text-blue-700 bg-blue-50 rounded-full">
-                                  <Users size={14} />
-                                  {canAttend.length}/{submissions.length}
-                                </span>
+                                <Tooltip content={hasExcluded ? `${canAttend.length} can attend of ${includedSubmissions.length} included (${submissions.length} total)` : `${canAttend.length} can attend of ${submissions.length} total`}>
+                                  <span className="flex items-center gap-1.5 px-3 py-1 text-sm font-semibold text-blue-700 bg-blue-50 rounded-full">
+                                    <Users size={14} />
+                                    {canAttend.length}/{includedSubmissions.length}
+                                    {hasExcluded && (
+                                      <span className="text-blue-400">({submissions.length})</span>
+                                    )}
+                                  </span>
+                                </Tooltip>
                                 <span className="flex items-center gap-1.5 px-3 py-1 text-sm font-semibold text-success bg-green-50 rounded-full">
                                   <Moon size={14} />
                                   {range.nights}
@@ -550,6 +609,19 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                                     </div>
                                   </div>
                                 </div>
+                                {hasExcluded && (
+                                  <div className="mt-3 pt-3 border-t border-gray-100">
+                                    <h5 className="text-sm font-semibold text-gray-400 mb-2">
+                                      <UserX size={14} className="inline mr-1" />
+                                      Excluded ({excludedPeople.size})
+                                    </h5>
+                                    <div className="text-sm text-gray-400 space-y-1">
+                                      {Array.from(excludedPeople).map((name) => (
+                                        <div key={name}>• {name}</div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

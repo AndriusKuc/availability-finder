@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SurveyModal } from '@/pages/Admin/SurveyModal';
 import * as api from '@/services/api';
@@ -237,6 +237,86 @@ describe('SurveyModal', () => {
       fireEvent.click(checkbox);
 
       expect(checkbox).toBeChecked();
+    });
+
+    it('shows exclude people section with all names', async () => {
+      renderModal();
+
+      fireEvent.click(screen.getByText('Find Dates'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Exclude people')).toBeInTheDocument();
+        // All submission names should be clickable buttons
+        expect(screen.getAllByRole('button').filter(btn => btn.textContent === 'Alice').length).toBeGreaterThan(0);
+        expect(screen.getAllByRole('button').filter(btn => btn.textContent === 'Bob').length).toBeGreaterThan(0);
+        expect(screen.getAllByRole('button').filter(btn => btn.textContent === 'Charlie').length).toBeGreaterThan(0);
+      });
+    });
+
+    it('allows excluding a person from search', async () => {
+      renderModal();
+
+      fireEvent.click(screen.getByText('Find Dates'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Exclude people')).toBeInTheDocument();
+      });
+
+      // Click on Alice to exclude her
+      const aliceButtons = screen.getAllByRole('button').filter(btn => btn.textContent === 'Alice');
+      fireEvent.click(aliceButtons[0]);
+
+      await waitFor(() => {
+        // Should show "(1 excluded)" indicator
+        expect(screen.getByText(/1 excluded/)).toBeInTheDocument();
+        // Min attendees should now show "of 2" instead of "of 3"
+        expect(screen.getByText(/of 2/)).toBeInTheDocument();
+      });
+    });
+
+    it('shows excluded count in badge when people are excluded', async () => {
+      renderModal();
+
+      fireEvent.click(screen.getByText('Find Dates'));
+
+      // First set nights to 1 to get results
+      const decrementButtons = screen.getAllByRole('button', { name: 'Decrease' });
+      fireEvent.click(decrementButtons[0]); // 3 -> 2
+      fireEvent.click(decrementButtons[0]); // 2 -> 1
+
+      await waitFor(() => {
+        expect(screen.getByText(/found/)).toBeInTheDocument();
+      });
+
+      // Exclude Alice
+      const aliceButtons = screen.getAllByRole('button').filter(btn => btn.textContent === 'Alice');
+      fireEvent.click(aliceButtons[0]);
+
+      await waitFor(() => {
+        // Should show "(1 excluded)" indicator and "of 2" for included count
+        expect(screen.getByText(/1 excluded/)).toBeInTheDocument();
+        expect(screen.getByText(/of 2/)).toBeInTheDocument();
+      });
+    });
+
+    it('shows message when all people are excluded', async () => {
+      renderModal();
+
+      fireEvent.click(screen.getByText('Find Dates'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Exclude people')).toBeInTheDocument();
+      });
+
+      // Exclude all people
+      const personButtons = screen.getAllByRole('button').filter(
+        btn => ['Alice', 'Bob', 'Charlie'].includes(btn.textContent || '')
+      );
+      personButtons.forEach(btn => fireEvent.click(btn));
+
+      await waitFor(() => {
+        expect(screen.getByText(/All people are excluded/)).toBeInTheDocument();
+      });
     });
   });
 
