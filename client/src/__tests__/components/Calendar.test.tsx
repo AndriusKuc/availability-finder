@@ -154,7 +154,7 @@ describe('Calendar', () => {
     expect(screen.getByText('All unavailable')).toBeInTheDocument();
   });
 
-  it('shows tooltip on hover when heatmapNames is provided', () => {
+  it('shows availability count in heatmap cells', () => {
     const heatmapData = { '2025-06-15': 2 };
     const heatmapNames = { '2025-06-15': ['Alice', 'Bob'] };
     render(
@@ -166,17 +166,13 @@ describe('Calendar', () => {
       />
     );
 
-    // Find the day with tooltip and hover over it
-    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
-    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
-
-    // Should show tooltip with names
-    expect(screen.getByRole('tooltip')).toBeInTheDocument();
-    expect(screen.getByText('• Alice')).toBeInTheDocument();
-    expect(screen.getByText('• Bob')).toBeInTheDocument();
+    const dayWithData = screen.getByTestId('day-with-tooltip-15');
+    // Should show 3 available (green) and 2 unavailable (red)
+    expect(dayWithData).toHaveTextContent('3');
+    expect(dayWithData).toHaveTextContent('2');
   });
 
-  it('shows correct count in tooltip', () => {
+  it('shows unavailable names directly in heatmap cells', () => {
     const heatmapData = { '2025-06-15': 2 };
     const heatmapNames = { '2025-06-15': ['Alice', 'Bob'] };
     render(
@@ -188,61 +184,14 @@ describe('Calendar', () => {
       />
     );
 
-    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
-    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
-
-    // Should show "2/5 unavailable"
-    expect(screen.getByText('2/5 unavailable')).toBeInTheDocument();
+    const dayWithData = screen.getByTestId('day-with-tooltip-15');
+    expect(dayWithData).toHaveTextContent('Alice');
+    expect(dayWithData).toHaveTextContent('Bob');
   });
 
-  it('shows "All unavailable" when everyone is unavailable', () => {
-    const heatmapData = { '2025-06-15': 3 };
-    const heatmapNames = { '2025-06-15': ['Alice', 'Bob', 'Charlie'] };
-    render(
-      <Calendar
-        {...defaultProps}
-        heatmapData={heatmapData}
-        heatmapNames={heatmapNames}
-        totalParticipants={3}
-      />
-    );
-
-    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
-    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
-
-    // Should show "All unavailable" in tooltip (not in legend)
-    const tooltip = screen.getByRole('tooltip');
-    expect(tooltip).toHaveTextContent('All unavailable');
-  });
-
-  it('truncates long list of names in tooltip', () => {
-    const heatmapData = { '2025-06-15': 7 };
-    const heatmapNames = {
-      '2025-06-15': ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank', 'Grace'],
-    };
-    render(
-      <Calendar
-        {...defaultProps}
-        heatmapData={heatmapData}
-        heatmapNames={heatmapNames}
-        totalParticipants={10}
-      />
-    );
-
-    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
-    fireEvent.mouseEnter(dayWithTooltip.parentElement!);
-
-    // Should show first 5 names and "+2 more"
-    expect(screen.getByText('• Alice')).toBeInTheDocument();
-    expect(screen.getByText('• Eve')).toBeInTheDocument();
-    expect(screen.getByText('+2 more')).toBeInTheDocument();
-    // Should not show 6th and 7th names directly
-    expect(screen.queryByText('• Frank')).not.toBeInTheDocument();
-  });
-
-  it('hides tooltip on mouse leave', () => {
-    const heatmapData = { '2025-06-15': 2 };
-    const heatmapNames = { '2025-06-15': ['Alice', 'Bob'] };
+  it('truncates names when more than 2 unavailable', () => {
+    const heatmapData = { '2025-06-15': 4 };
+    const heatmapNames = { '2025-06-15': ['Alice', 'Bob', 'Charlie', 'David'] };
     render(
       <Calendar
         {...defaultProps}
@@ -252,14 +201,11 @@ describe('Calendar', () => {
       />
     );
 
-    const dayWithTooltip = screen.getByTestId('day-with-tooltip-15');
-    const tooltipTrigger = dayWithTooltip.parentElement!;
-
-    fireEvent.mouseEnter(tooltipTrigger);
-    expect(screen.getByRole('tooltip')).toBeInTheDocument();
-
-    fireEvent.mouseLeave(tooltipTrigger);
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    const dayWithData = screen.getByTestId('day-with-tooltip-15');
+    // Should show first 2 names and "+2" for remaining
+    expect(dayWithData).toHaveTextContent('Alice');
+    expect(dayWithData).toHaveTextContent('Bob');
+    expect(dayWithData).toHaveTextContent('+2');
   });
 
   it('shows Today button when not on current month and onToday is provided', () => {

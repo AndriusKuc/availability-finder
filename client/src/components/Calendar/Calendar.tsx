@@ -1,5 +1,5 @@
 import { useCallback, useState, useRef } from 'react';
-import { Button, Tooltip } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 
 interface CalendarProps {
@@ -108,37 +108,6 @@ export function Calendar({
     return Math.round((count / totalParticipants) * 10);
   };
 
-  const formatTooltipDate = (dateStr: string): string => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const renderTooltipContent = (dateStr: string, names: string[], total: number) => {
-    if (names.length === 0) return null;
-
-    const allUnavailable = names.length === total;
-    const label = allUnavailable ? 'All unavailable' : `${names.length}/${total} unavailable`;
-
-    return (
-      <div className="text-left">
-        <div className="text-white font-medium mb-1">{formatTooltipDate(dateStr)}</div>
-        <div className="font-semibold text-orange-300 mb-1">{label}</div>
-        <div className="text-gray-300">
-          {names.slice(0, 5).map((name, i) => (
-            <div key={i}>• {name}</div>
-          ))}
-          {names.length > 5 && (
-            <div className="text-gray-400 mt-1">+{names.length - 5} more</div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   const days = [];
 
   for (let i = 0; i < startDay; i++) {
@@ -153,14 +122,45 @@ export function Calendar({
     const intensity = heatmapData ? getIntensity(date) : 0;
     const names = heatmapNames?.[date] || [];
     const inRange = isDateInRange(date);
+    const availableCount = totalParticipants - names.length;
 
+    // For heatmap mode, use a different layout
+    if (heatmapData && inRange) {
+      const cellClass = `intensity-${intensity} p-1 flex flex-col items-center justify-start select-none transition-all duration-200 hover:ring-2 hover:ring-gray-400 hover:ring-inset min-h-[70px]`;
+
+      days.push(
+        <div
+          key={date}
+          className={cellClass}
+          data-testid={names.length > 0 ? `day-with-tooltip-${day}` : undefined}
+        >
+          <div className="text-sm font-semibold text-gray-800">{day}</div>
+          <div className="flex items-center gap-1 mt-0.5">
+            <span className="text-[10px] font-bold text-green-700">{availableCount}</span>
+            <span className="text-[10px] text-gray-400">/</span>
+            <span className="text-[10px] font-bold text-red-600">{names.length}</span>
+          </div>
+          {names.length > 0 && (
+            <div className="text-[9px] text-red-600 text-center leading-tight mt-0.5 overflow-hidden max-h-[28px]">
+              {names.slice(0, 2).map((name, i) => (
+                <div key={i} className="truncate max-w-[50px]">{name}</div>
+              ))}
+              {names.length > 2 && (
+                <div className="text-gray-500">+{names.length - 2}</div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+      continue;
+    }
+
+    // Standard mode (non-heatmap)
     let className =
       'aspect-square flex items-center justify-center text-sm font-medium select-none transition-all duration-200';
 
     if (!inRange) {
       className += ' text-gray-300 cursor-not-allowed';
-    } else if (heatmapData) {
-      className += ` intensity-${intensity} hover:ring-2 hover:ring-gray-400 hover:ring-inset cursor-default`;
     } else if (isSelected) {
       className += ' bg-primary text-white hover:bg-primary-dark cursor-pointer';
     } else {
@@ -173,31 +173,16 @@ export function Calendar({
         onMouseDown={() => inRange && handleDayMouseDown(date)}
         onMouseEnter={() => inRange && handleDayMouseEnter(date)}
         onMouseUp={handleMouseUp}
-        data-testid={names.length > 0 ? `day-with-tooltip-${day}` : undefined}
       >
         {day}
       </div>
     );
 
-    // Wrap with tooltip if there are unavailable names, otherwise use plain wrapper
-    const hasTooltip = heatmapData && names.length > 0 && inRange;
-    if (hasTooltip) {
-      days.push(
-        <Tooltip
-          key={date}
-          content={renderTooltipContent(date, names, totalParticipants)}
-        >
-          {dayContent}
-        </Tooltip>
-      );
-    } else {
-      // Use same structure as Tooltip for consistent grid behavior
-      days.push(
-        <div key={date} className="relative">
-          {dayContent}
-        </div>
-      );
-    }
+    days.push(
+      <div key={date} className="relative">
+        {dayContent}
+      </div>
+    );
   }
 
   return (

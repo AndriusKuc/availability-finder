@@ -347,9 +347,12 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
 
           {tab === 'calendar' && (
             <div>
-              <p className="text-sm text-gray-500 mb-4">
-                Hover over dates to see who is unavailable
-              </p>
+              <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                <span>Each cell shows:</span>
+                <span className="font-semibold text-green-700">available</span>
+                <span>/</span>
+                <span className="font-semibold text-red-600">unavailable</span>
+              </div>
               <Calendar
                 selectedDates={new Set()}
                 onToggleDate={() => {}}
