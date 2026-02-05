@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button, NumberStepper, Tooltip } from '@/components/ui';
 import { Calendar } from '@/components/Calendar';
-import { X, Trash, Link, ChevronRight, Moon, Users, UserX } from '@/components/icons';
+import { X, Trash, Link, ChevronRight, Moon, Users, UserX, Check } from '@/components/icons';
 import { adminApi } from '@/services/api';
 import type { Submission, SurveyWithCount, DateRange } from '@/types';
 
@@ -24,6 +24,8 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [expandedRanges, setExpandedRanges] = useState<Set<number>>(new Set());
   const [excludedPeople, setExcludedPeople] = useState<Set<string>>(new Set());
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const detailsPanelRef = useRef<HTMLDivElement>(null);
 
   // Calendar state - initialize to survey start date
   const [currentDate, setCurrentDate] = useState(
@@ -35,6 +37,14 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
     await navigator.clipboard.writeText(url);
     setCopiedId(sub.id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleCalendarDateClick = (date: string) => {
+    setSelectedCalendarDate(date);
+    // Scroll to details panel after state updates
+    setTimeout(() => {
+      detailsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   };
 
   const toggleRangeExpanded = (index: number) => {
@@ -260,7 +270,7 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">{survey.name}</h2>
           <button
@@ -347,12 +357,9 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
 
           {tab === 'calendar' && (
             <div>
-              <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                <span>Each cell shows:</span>
-                <span className="font-semibold text-green-700">available</span>
-                <span>/</span>
-                <span className="font-semibold text-red-600">unavailable</span>
-              </div>
+              <p className="text-sm text-gray-500 mb-3">
+                Click on a date for full details
+              </p>
               <Calendar
                 selectedDates={new Set()}
                 onToggleDate={() => {}}
@@ -367,7 +374,87 @@ export function SurveyModal({ survey, onClose, onUpdate }: SurveyModalProps) {
                 heatmapNames={heatmapData.names}
                 totalParticipants={submissions.length}
                 readOnly
+                onDateClick={handleCalendarDateClick}
+                highlightedDate={selectedCalendarDate || undefined}
               />
+
+              {/* Date details panel */}
+              {selectedCalendarDate && (() => {
+                const unavailableNames = heatmapData.names[selectedCalendarDate] || [];
+                const availableNames = submissions
+                  .map(s => s.person_name)
+                  .filter(name => !unavailableNames.includes(name));
+                const dateObj = new Date(selectedCalendarDate + 'T00:00:00');
+                const formattedDate = dateObj.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                });
+
+                return (
+                  <div ref={detailsPanelRef} className="mt-4 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-900">{formattedDate}</h4>
+                      <button
+                        onClick={() => setSelectedCalendarDate(null)}
+                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                        aria-label="Close details"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="flex items-center justify-center w-7 h-7 rounded-full bg-green-100">
+                            <Check size={16} className="text-green-600" />
+                          </span>
+                          <span className="text-sm font-semibold text-green-700">
+                            Available ({availableNames.length})
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 pl-9">
+                          {availableNames.length > 0 ? (
+                            availableNames.map((name) => (
+                              <div key={name} className="text-sm text-gray-700 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                {name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-gray-400 italic">No one available</div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="flex items-center justify-center w-7 h-7 rounded-full bg-red-100">
+                            <X size={16} className="text-red-600" />
+                          </span>
+                          <span className="text-sm font-semibold text-red-700">
+                            Unavailable ({unavailableNames.length})
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 pl-9">
+                          {unavailableNames.length > 0 ? (
+                            unavailableNames.map((name) => (
+                              <div key={name} className="text-sm text-gray-700 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                {name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-gray-400 italic">Everyone available</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

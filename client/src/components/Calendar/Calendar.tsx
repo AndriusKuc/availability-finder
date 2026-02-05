@@ -16,6 +16,8 @@ interface CalendarProps {
   heatmapNames?: Record<string, string[]>;
   totalParticipants?: number;
   readOnly?: boolean;
+  onDateClick?: (date: string) => void;
+  highlightedDate?: string;
 }
 
 export function Calendar({
@@ -32,6 +34,8 @@ export function Calendar({
   heatmapNames,
   totalParticipants = 0,
   readOnly = false,
+  onDateClick,
+  highlightedDate,
 }: CalendarProps) {
   const [isDragging, setIsDragging] = useState(false);
   const dragModeRef = useRef<'select' | 'deselect' | null>(null);
@@ -126,12 +130,18 @@ export function Calendar({
 
     // For heatmap mode, use a different layout
     if (heatmapData && inRange) {
-      const cellClass = `intensity-${intensity} p-1 flex flex-col items-center justify-start select-none transition-all duration-200 hover:ring-2 hover:ring-gray-400 hover:ring-inset min-h-[70px]`;
+      const isHighlighted = highlightedDate === date;
+      const cellClass = `intensity-${intensity} p-1 flex flex-col items-center justify-start select-none transition-all duration-200 cursor-pointer min-h-[70px] ${
+        isHighlighted
+          ? 'ring-2 ring-gray-800 ring-inset'
+          : 'hover:ring-2 hover:ring-gray-400 hover:ring-inset'
+      }`;
 
       days.push(
         <div
           key={date}
           className={cellClass}
+          onClick={() => onDateClick?.(date)}
           data-testid={names.length > 0 ? `day-with-tooltip-${day}` : undefined}
         >
           <div className="text-sm font-semibold text-gray-800">{day}</div>
