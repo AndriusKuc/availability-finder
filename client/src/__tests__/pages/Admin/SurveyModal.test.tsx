@@ -370,8 +370,7 @@ describe('SurveyModal', () => {
     it('calls onClose when close button is clicked', () => {
       renderModal();
 
-      const closeButton = screen.getByRole('button', { name: '' });
-      // Find the X button (it's the one with the X icon)
+      // Find the X button (it's the one with the X icon in the header)
       const buttons = screen.getAllByRole('button');
       const closeBtn = buttons.find(btn => btn.querySelector('svg'));
 
